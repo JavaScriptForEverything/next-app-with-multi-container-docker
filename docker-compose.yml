@@ -1,0 +1,24 @@
+version: "3"
+
+volumes:
+  docker:
+
+services:
+  database:
+    image: mongo
+    ports:
+      - 27017:27017
+    volumes:
+      - docker:/data/db
+
+  next:
+    build: .
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/app
+    environment:
+      DB_LOCAL_URL: mongodb://database:27017/next-docker
+    depends_on:
+      - database
+
