@@ -1,20 +1,18 @@
 version: "3"
 
 volumes:
-  docker:
+  data:
 
 services:
   database:
-    image: mongo
+    image: mongo:4.0-xenial
     ports:
       - 27017:27017
     volumes:
-      - docker:/data/db
+      - data:/data/db
 
-  next:
+  nextjs:
     build: .
-    ports:
-      - 3000:3000
     volumes:
       - .:/app
     environment:
@@ -22,3 +20,8 @@ services:
     depends_on:
       - database
 
+
+  nginx:
+    build: ./nginx
+    ports:
+      - 80:80

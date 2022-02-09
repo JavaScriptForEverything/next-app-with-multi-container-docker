@@ -27,6 +27,7 @@ const ViewHandler = ({ view }) => {
 	const deleteHandler = (id) => async (evt) => {
 		evt.preventDefault()
 
+
 		await axios.delete(`/api/users/${id}`)
 		setClicked(clicked + 1)
 	}

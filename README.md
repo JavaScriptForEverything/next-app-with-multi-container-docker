@@ -1,32 +1,41 @@
-# How to deploy Nextjs + database app with docker multi-container
-
-### Deployment React App With Docker
+# How to deploy Nextjs (+mongoose) app with Nginx by docker
 
 
 ###### NPM packages used
 
+`
 $ yarn add next react react-dom
-		@mui/material @mui/icons-material @emotion/react @emotion/styled
-		@axios next-connect next-absolute-url
-		mongoose
+`
+
+```
+	@mui/material @mui/icons-material @emotion/react @emotion/styled
+	mongoose next-connect next-absolute-url
+	axios
+```
 
 
 ###### Directory Stracture
 
 ```
+├── docker-compose.yml 					: (4)
+├── Dockerfile 						: (1)
 ├── .dockerignore
-├── Dockerfile
-├── docker-compose.yml
+├── nginx
+│ ├── default.conf 					: (2)
+│ └── Dockerfile 					: (3)
 │
 ├── pages
-│ ├── addUser.js
 │ ├── api
 │ │ └── users
 │ │     ├── [id].js
 │ │     └── index.js
 │ │
 │ ├── index.js
+│ ├── addUser.js
 │ └── viewUser.js
+│
+├── public
+│ └── favicon.ico
 │
 ├── server
 │ ├── controllers
@@ -50,34 +59,108 @@ $ yarn add next react react-dom
 	COPY package.json yarn.lock ./
 	RUN yarn install
 	COPY . .
+	ENV DB_LOCAL_URL=mongodb://localhost:27017/next-docker 	: will be override in compose file
 	EXPOSE 3000
-	CMD ["yarn", "dev"]
+	RUN yarn build
+	# CMD ["yarn", "dev"] 					: use as development purpose
+	CMD ["yarn", "start"] 					: used when try to deploy
+
+###### /nginx/Dockerfile
+
+	FROM nginx:1.21.6-alpine
+	RUN rm /etc/nginx/conf.d/*
+	COPY ./default.conf /etc/nginx/conf.d/ 			: The nginx config
+	EXPOSE 80
+	CMD [ "nginx", "-g", "daemon off;" ]
+
+
+###### /nginx/default.conf
+
+- NB: config used based on name 'nextjs', to use other name change default.conf according to this
+- Details found on: https://steveholgado.com/nginx-for-nextjs/
+
+
+```
+proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=STATIC:10m inactive=7d use_temp_path=off;
+
+upstream nextjs_upstream {
+  server nextjs:3000;
+}
+
+server {
+  listen 80 default_server;
+
+  server_name _;
+
+  server_tokens off;
+
+  gzip on;
+  gzip_proxied any;
+  gzip_comp_level 4;
+  gzip_types text/css application/javascript image/svg+xml;
+
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection 'upgrade';
+  proxy_set_header Host $host;
+  proxy_cache_bypass $http_upgrade;
+
+  location /_next/static {
+    proxy_cache STATIC;
+    proxy_pass http://nextjs_upstream;
+
+    # For testing cache - remove before deploying to production
+    add_header X-Cache-Status $upstream_cache_status;
+  }
+
+  location /static {
+    proxy_cache STATIC;
+    proxy_ignore_headers Cache-Control;
+    proxy_cache_valid 60m;
+    proxy_pass http://nextjs_upstream;
+
+    # For testing cache - remove before deploying to production
+    add_header X-Cache-Status $upstream_cache_status;
+  }
+
+  location / {
+    proxy_pass http://nextjs_upstream;
+  }
+}
+```
+
 
 
 ###### /docker-compose.yml  (use space, instead of tab)
 
+```
 	version: "3"
+
 	volumes:
-	  docker:
+	  data:
 
 	services:
 	  database:
-	    image: mongo
+	    image: mongo:4.0-xenial
 	    ports:
 	      - 27017:27017
 	    volumes:
-	      - docker:/data/db
+	      - data:/data/db
 
-	  next:
+	  nextjs: 						: this name used in 'default.conf'
 	    build: .
-	    ports:
-	      - 3000:3000
 	    volumes:
-	      - .:/app
+	      - .:/app 						: just for development purpose
 	    environment:
 	      DB_LOCAL_URL: mongodb://database:27017/next-docker
 	    depends_on:
 	      - database
+
+	  nginx:
+	    build: ./nginx
+	    ports:
+	      - 80:80
+```
 
 
 
@@ -87,7 +170,7 @@ $ yarn add next react react-dom
 	$ docker image ls 			: projectDirectoryName-imageName
 	$ docker-compose up -d 		(2)	: Start multi-container
 	$ docker-compose logs -f  		: See all (both) container's logs together
-	$ docker logs -f next-app_next 		: See only 'next-app_next' container's logs
+	$ docker logs -f next-app_nextjs 	: See only 'next-app_next' container's logs
 
 	$ docker-compose ps -a 			: show process/containers running by docker-compose
 	$ docker ps -a 				: show all process
@@ -99,6 +182,7 @@ $ yarn add next react react-dom
 
 ###### Test app on browser
 
-(Browser) http://localhost:3000 		: We EXPOSEed & bind port 3000 + Production
+(Browser) http://localhost:80 			: We EXPOSEed & bind port 80 + Production
+(Browser) http://localhost
 
 

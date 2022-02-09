@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import axios from 'axios'
-import absoluteUrl from 'next-absolute-url'
+// import axios from 'axios'
+// import absoluteUrl from 'next-absolute-url'
 
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -19,7 +19,7 @@ const Index = () => {
 	return (
 		<>
 			<Typography variant='h6' color='textSecondary' paragraph align='center'>
-				Next.JS with docker & docker-compose
+				Next.JS with docker & docker-compose !!
 			</Typography>
 
 			<Box sx={{display: 'flex', justifyContent: 'space-between'}}>
@@ -37,10 +37,13 @@ export default Index
 
 
 
-// // Server-Side Rendering
+// Server-Side Rendering
 // export const getServerSideProps = async(ctx) => {
 // 	const { origin } = absoluteUrl(ctx.req)
-// 	const { data: { users } } = await axios.get(`${origin}/api/users`)
+// 	// const { data: { users } } = await axios.get(`${origin}/api/users`)
+
+// 	const users = ['user data']
+// 	console.log({ users })
 
 // 	return { props: { users }}
 // }
